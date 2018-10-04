@@ -184,7 +184,7 @@ count(Connection, Query) ->
 %% @doc Create index on collection according to given spec.
 %%      The key specification is a bson documents with the following fields:
 %%      IndexSpec      :: bson document, for e.g. {field, 1, other, -1, location, 2d}, <strong>required</strong>
--spec ensure_index(pid(), colldb(), bson:document()) -> ok | {error, any()}.
+-spec ensure_index(pid(), colldb(), bson:document() | map()) -> ok | {error, any()}.
 ensure_index(Connection, Coll, IndexSpec) ->
   mc_connection_man:request_worker(Connection, #ensure_index{collection = Coll, index_spec = IndexSpec}).
 

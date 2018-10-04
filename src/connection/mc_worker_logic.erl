@@ -38,7 +38,7 @@ encode_request(Database, Request) when is_list(Request) ->
     {NewBin, NewId} = encode_request(Database, Message),
     {Bin ++ [NewBin], NewId}
   end, {[], 0}, Request);
-  
+
 encode_request(Database, Request) ->
   RequestId = mongo_id_server:request_id(),
   Payload = mongo_protocol:put_message(Database, Request, RequestId),
@@ -83,6 +83,7 @@ collection(#'insert'{collection = Coll}) -> Coll;
 collection(#'update'{collection = Coll}) -> Coll;
 collection(#'delete'{collection = Coll}) -> Coll.
 
+-spec ensure_index(bson:document() | map(), mc_worker_api:database(), mc_worker_api:dbcoll()) -> bson:document().
 ensure_index(IndexSpec = #{<<"key">> := Key}, Database, Collection) ->
   do_ensure_index(IndexSpec, Database, Collection, Key);
 ensure_index(IndexSpec, Database, Collection) when is_tuple(IndexSpec) ->

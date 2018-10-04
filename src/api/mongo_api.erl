@@ -25,12 +25,15 @@
   ensure_index/3,
   disconnect/1]).
 
+-type topology() :: atom() | pid().
+
 -spec connect(atom(), list(), proplists:proplist(), proplists:proplist()) -> {ok, pid()}.
 connect(Type, Hosts, TopologyOptions, WorkerOptions) ->
   mongoc:connect({Type, Hosts}, TopologyOptions, WorkerOptions).
 
--spec insert(atom() | pid(), collection(), list() | map() | bson:document()) ->
-  {{boolean(), map()}, list()}.
+-spec insert(topology(), collection(), bson:document()) -> {{boolean(), map()}, bson:document()};
+    (pid(), collection(), list()) -> {{boolean(), map()}, list()};
+    (pid(), collection(), map()) -> {{boolean(), map()}, map()}.
 insert(Topology, Collection, Document) ->
   mongoc:transaction(Topology,
     fun(#{pool := Worker}) ->
@@ -38,8 +41,8 @@ insert(Topology, Collection, Document) ->
     end,
     #{}).
 
--spec update(atom() | pid(), collection(), selector(), map(), map()) ->
-  {boolean(), map()}.
+-spec update(topology(), collection(), selector(), bson:document(), map()) -> {boolean(), bson:document()};
+    (pid(), collection(), selector(), map(), map()) -> {boolean(), map()}.
 update(Topology, Collection, Selector, Doc, Opts) ->
   Upsert = maps:get(upsert, Opts, false),
   MultiUpdate = maps:get(multi, Opts, false),
@@ -48,7 +51,7 @@ update(Topology, Collection, Selector, Doc, Opts) ->
       mc_worker_api:update(Worker, Collection, Selector, Doc, Upsert, MultiUpdate)
     end, Opts).
 
--spec delete(atom() | pid(), collection(), selector()) ->
+-spec delete(topology(), collection(), selector()) ->
   {boolean(), map()}.
 delete(Topology, Collection, Selector) ->
   mongoc:transaction(Topology,
@@ -57,12 +60,12 @@ delete(Topology, Collection, Selector) ->
     end,
     #{}).
 
--spec find(atom() | pid(), collection(), selector(), projector()) ->
+-spec find(topology(), collection(), selector(), projector()) ->
   {ok, cursor()} | [].
 find(Topology, Collection, Selector, Projector) ->
   find(Topology, Collection, Selector, Projector, 0, 0).
 
--spec find(atom() | pid(), collection(), selector(), projector(), integer(), integer()) ->
+-spec find(topology(), collection(), selector(), projector(), integer(), integer()) ->
   {ok, cursor()} | [].
 find(Topology, Collection, Selector, Projector, Skip, Batchsize) ->
   mongoc:transaction_query(Topology,
@@ -71,12 +74,12 @@ find(Topology, Collection, Selector, Projector, Skip, Batchsize) ->
       mc_worker_api:find(Worker, Query)
     end, #{}).
 
--spec find_one(atom() | pid(), collection(), selector(), projector()) ->
+-spec find_one(topology(), collection(), selector(), projector()) ->
   map() | undefined.
 find_one(Topology, Collection, Selector, Projector) ->
   find_one(Topology, Collection, Selector, Projector, 0).
 
--spec find_one(atom() | pid(), collection(), selector(), projector(), integer()) ->
+-spec find_one(topology(), collection(), selector(), projector(), integer()) ->
   map() | undefined.
 find_one(Topology, Collection, Selector, Projector, Skip) ->
   mongoc:transaction_query(Topology,
@@ -85,7 +88,7 @@ find_one(Topology, Collection, Selector, Projector, Skip) ->
       mc_worker_api:find_one(Worker, Query)
     end, #{}).
 
--spec count(atom() | pid(), collection(), selector(), integer()) -> integer().
+-spec count(topology(), collection(), selector(), integer()) -> integer().
 count(Topology, Collection, Selector, Limit) ->
   mongoc:transaction_query(Topology,
     fun(Conf = #{pool := Worker}) ->
@@ -97,13 +100,13 @@ count(Topology, Collection, Selector, Limit) ->
 %% @doc Creates index on collection according to given spec.
 %%      The key specification is a bson documents with the following fields:
 %%      key      :: bson document, for e.g. {field, 1, other, -1, location, 2d}, <strong>required</strong>
--spec ensure_index(pid() | atom(), collection(), bson:document()) -> ok | {error, any()}.
+-spec ensure_index(topology(), collection(), bson:document() | map()) -> ok | {error, any()}.
 ensure_index(Topology, Coll, IndexSpec) ->
   mongoc:transaction(Topology,
     fun(#{pool := Worker}) ->
       mc_worker_api:ensure_index(Worker, Coll, IndexSpec)
     end, #{}).
 
--spec disconnect(atom() | pid()) -> ok.
+-spec disconnect(topology()) -> ok.
 disconnect(Topology) ->
   mongoc:disconnect(Topology).
